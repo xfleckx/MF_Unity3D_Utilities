@@ -5,6 +5,7 @@ using UnityEditorInternal;
 using System;
 using System.Linq;
 using System.IO;
+using System.Diagnostics;
 
 public class WindowGrabber : EditorWindow {
 
@@ -16,15 +17,12 @@ public class WindowGrabber : EditorWindow {
     private const float Y_POSITION_NEW_SCENE_VIEW = 10;
     private const float WIDTH_NEW_SCENE_VIEW = 600;
     private const float HEIGHT_NEW_SCENE_VIEW = 400;
-    private enum OutputFormat { JPG, PNG }
+    private enum OutputFormat { jpg, png }
 
     private bool selectJPG = false;
-    private bool selectPNG = true;
+    private bool selectPNG = true; 
 
-    private const string JPG = "jpg";
-    private const string PNG = "png";
-
-    private OutputFormat selectedOutputFormat = OutputFormat.PNG;
+    private OutputFormat selectedOutputFormat = OutputFormat.png;
 
     private const string StandardImageFolderName = "ScreenGrabberOutput";
     private const string StandardPatternImageName = "sceneView";
@@ -47,8 +45,9 @@ public class WindowGrabber : EditorWindow {
         }
 
         window.titleContent = new GUIContent( WindowTitle );
-
+        
         window.Show();
+        
     }
 
     void OnGUI()
@@ -59,15 +58,17 @@ public class WindowGrabber : EditorWindow {
 
         GUILayout.Label("Image Format");
 
-        selectJPG = GUILayout.Toggle(!selectPNG, JPG);
+        selectJPG = GUILayout.Toggle(!selectPNG, Enum.GetName(typeof(OutputFormat), OutputFormat.jpg));
 
-        selectPNG = GUILayout.Toggle(!selectJPG, PNG);
+        selectPNG = GUILayout.Toggle(!selectJPG, Enum.GetName(typeof(OutputFormat), OutputFormat.png));
 
         if (selectJPG)
-            selectedOutputFormat = OutputFormat.JPG;
+            selectedOutputFormat = OutputFormat.jpg;
 
         if (selectPNG)
-            selectedOutputFormat = OutputFormat.PNG;
+            selectedOutputFormat = OutputFormat.png;
+
+        string extension = Enum.GetName(typeof(OutputFormat), selectedOutputFormat);
 
         EditorGUILayout.EndHorizontal();
 
@@ -78,7 +79,7 @@ public class WindowGrabber : EditorWindow {
         {
             var sceneView = SceneView.lastActiveSceneView;
 
-            if (sceneView = null)
+            if (sceneView == null)
                 sceneView = EditorWindow.GetWindow<SceneView>();
 
             if (sceneView == null) { 
@@ -99,7 +100,9 @@ public class WindowGrabber : EditorWindow {
                 return;
             }
 
-            GrabSingleView(sceneView, StandardImageFolderName, StandardPatternImageName, selectedOutputFormat);
+            var resultFilePath = string.Format("{1}{0}{2}.{3}", Path.DirectorySeparatorChar, StandardImageFolderName, StandardPatternImageName, extension);
+
+            GrabSingleView(sceneView, new FileInfo(resultFilePath), selectedOutputFormat);
         }
 
         var availableViews = SceneView.sceneViews;
@@ -112,15 +115,23 @@ public class WindowGrabber : EditorWindow {
             int idx = 0;
             foreach (var view in listOfViews)
             {
-                GrabSingleView(view, StandardImageFolderName, string.Format(multiImageNameFormat, idx), selectedOutputFormat);
+                var targetImageFilePath = Path.Combine(StandardImageFolderName, string.Format(multiImageNameFormat, idx));
+
+                GrabSingleView(view, new FileInfo(targetImageFilePath), selectedOutputFormat);
                 idx++;
             }
+        }
+
+        if(GUILayout.Button("Show Screenshot Folder"))
+        {
+            Process.Start("explorer.exe", StandardImageFolderName);
+            
         }
 
         EditorGUILayout.EndVertical();
     }
 
-    private void GrabSingleView(EditorWindow view, string folderName, string fileName, OutputFormat format)
+    private void GrabSingleView(EditorWindow view, FileInfo targetFile, OutputFormat format)
     {
         var width = Mathf.FloorToInt(view.position.width);
         var height = Mathf.FloorToInt(view.position.height);
@@ -133,23 +144,17 @@ public class WindowGrabber : EditorWindow {
 
         screenShot.SetPixels(colorArray);
 
-        byte[] encodedBytes = null;
-        string extension = string.Empty;
-
-        if (format == OutputFormat.JPG)
+        byte[] encodedBytes = null; 
+        if (format == OutputFormat.jpg)
         {
-            encodedBytes = screenShot.EncodeToJPG();
-            extension = JPG;
+            encodedBytes = screenShot.EncodeToJPG(); 
         }
         else
         {
-            encodedBytes = screenShot.EncodeToPNG();
-            extension = PNG;
+            encodedBytes = screenShot.EncodeToPNG(); 
         }
 
-        var resultFilePath = string.Format("{1}{0}{2}.{3}",  Path.DirectorySeparatorChar, folderName, fileName, extension);
-
-        File.WriteAllBytes(resultFilePath, encodedBytes);
+        File.WriteAllBytes(targetFile.FullName, encodedBytes);
 
         this.ShowAfterHiding();
     }
