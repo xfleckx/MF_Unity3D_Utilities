@@ -7,7 +7,8 @@ using System.Linq;
 public class CustomObjectAlignment : EditorWindow {
 
     private enum AlignmentTypes { Origin, FirstSelected, LastSelected }
-
+    private enum TargetAxes { x,y,z}
+     
     private const string WindowTitle = "Alignment Tools";
     
     [MenuItem("Window/MF_CustomAlignment")]
@@ -32,9 +33,53 @@ public class CustomObjectAlignment : EditorWindow {
         EditorGUILayout.EndVertical();
 
     }
+    private void RenderAlignmentsAtOrigin()
+    {
+        EditorGUILayout.LabelField("Align Objects at Origin on:");
+        
+        targetAlignment = (AlignmentTypes) EditorGUILayout.EnumPopup(targetAlignment);
 
+        EditorGUILayout.BeginHorizontal();
+
+        if (GUILayout.Button("X") && hasSelection)
+        {
+            var transforms = selecteObjects.Select((o) => o.transform);
+
+            foreach (var item in transforms)
+            {
+                item.position = GetPositionFrom(targetAlignment, TargetAxes.x, item.position, transforms);
+            }
+        }
+
+        if (GUILayout.Button("Y") && hasSelection)
+        {
+            var transforms = selecteObjects.Select((o) => o.transform);
+
+            foreach (var item in transforms)
+            {
+                item.position = GetPositionFrom(targetAlignment, TargetAxes.y, item.position, transforms);
+            }
+        }
+
+        if (GUILayout.Button("Z") && hasSelection)
+        {
+            var transforms = selecteObjects.Select((o) => o.transform);
+
+            foreach (var item in transforms)
+            {
+                item.position = GetPositionFrom(targetAlignment, TargetAxes.z, item.position, transforms);
+            }
+        }
+
+        EditorGUILayout.EndHorizontal();
+
+    }
+
+    #region Alignment utilities
     private bool hasSelection = false;
     private List<GameObject> selecteObjects;
+
+    private AlignmentTypes targetAlignment = AlignmentTypes.Origin;
 
     private bool CheckEditorSelection()
     {
@@ -46,96 +91,68 @@ public class CustomObjectAlignment : EditorWindow {
 
         return false;
     }
-      
-    private AlignmentTypes targetAlignment = AlignmentTypes.Origin;
 
-    private void RenderAlignmentsAtOrigin()
+    private Vector3 GetNewPosition(Vector3 oldPosition, TargetAxes axes)
     {
-        EditorGUILayout.LabelField("Align Objects at Origin on:");
+        Vector3 newPosition;
 
-
-
-        targetAlignment = (AlignmentTypes) EditorGUILayout.EnumPopup(targetAlignment);
-
-        EditorGUILayout.BeginHorizontal();
-
-        if (GUILayout.Button("X") && hasSelection)
+        switch (axes)
         {
-            var transforms = selecteObjects.Select((o) => o.transform);
-
-            foreach (var item in transforms)
-            {
-                switch (targetAlignment)
-                {
-                    case AlignmentTypes.Origin:
-                        item.position = new Vector3(0, item.position.y, item.position.z);
-                        break;
-                    case AlignmentTypes.FirstSelected:
-                        var first = transforms.First().position;
-                        item.position = new Vector3(first.x, item.position.y, item.position.z);
-                        break;
-                    case AlignmentTypes.LastSelected:
-                        var last = transforms.Last().position;
-                        item.position = new Vector3(last.x, item.position.y, item.position.z);
-                        break;
-                    default:
-                        break;
-                }
-            }
+            case TargetAxes.x:
+                newPosition = new Vector3(0, oldPosition.y, oldPosition.z);
+                break;
+            case TargetAxes.y:
+                newPosition = new Vector3(oldPosition.x, 0, oldPosition.z);
+                break;
+            case TargetAxes.z:
+                newPosition = new Vector3(oldPosition.x, oldPosition.y, 0);
+                break;
+            default:
+                newPosition = oldPosition;
+                break;
         }
 
-        if (GUILayout.Button("Y") && hasSelection)
-        {
-                var transforms = selecteObjects.Select((o) => o.transform);
-
-                foreach (var item in transforms)
-                {
-                    switch (targetAlignment)
-                    {
-                        case AlignmentTypes.Origin:
-                            item.position = new Vector3(item.position.x, 0, item.position.z);
-                            break;
-                        case AlignmentTypes.FirstSelected:
-                            var first = transforms.First().position;
-                            item.position = new Vector3(item.position.y, first.y, item.position.z);
-                            break;
-                        case AlignmentTypes.LastSelected:
-                            var last = transforms.Last().position;
-                            item.position = new Vector3(item.position.x, last.y, item.position.z);
-                            break;
-                        default:
-                            break;
-                    } 
-                }
-        }
-
-        if (GUILayout.Button("Z") && hasSelection)
-        { 
-            var transforms = selecteObjects.Select((o) => o.transform);
-
-            foreach (var item in transforms)
-            {
-                switch (targetAlignment)
-                {
-                    case AlignmentTypes.Origin:
-                        item.position = new Vector3(item.position.x, item.position.z, 0);
-                        break;
-                    case AlignmentTypes.FirstSelected:
-                        var first = transforms.First().position;
-                        item.position = new Vector3(item.position.y, item.position.y, first.z);
-                        break;
-                    case AlignmentTypes.LastSelected:
-                        var last = transforms.Last().position;
-                        item.position = new Vector3(item.position.x, item.position.y, last.z);
-                        break;
-                    default:
-                        break;
-                } 
-            } 
-        }
-
-        EditorGUILayout.EndHorizontal();
-
+        return newPosition;
     }
-     
+
+    private Vector3 GetNewPosition(Vector3 refPosition, Vector3 oldPosition, TargetAxes axes)
+    {
+        Vector3 newPosition;
+
+        switch (axes)
+        {
+            case TargetAxes.x:
+                newPosition = new Vector3(refPosition.x, oldPosition.y, oldPosition.z);
+                break;
+            case TargetAxes.y:
+                newPosition = new Vector3(oldPosition.x, refPosition.y, oldPosition.z);
+                break;
+            case TargetAxes.z:
+                newPosition = new Vector3(oldPosition.x, oldPosition.y, refPosition.z);
+                break;
+            default:
+                newPosition = oldPosition;
+                break;
+        }
+
+        return newPosition;
+    }
+
+    private Vector3 GetPositionFrom(AlignmentTypes type, TargetAxes axes, Vector3 oldPosition, IEnumerable<Transform> possibleReferences)
+    {
+        switch (type)
+        {
+            case AlignmentTypes.Origin:
+                return GetNewPosition(oldPosition, axes);
+            case AlignmentTypes.FirstSelected:
+                var first = possibleReferences.First().position;
+                return GetNewPosition(first, oldPosition, axes);
+            case AlignmentTypes.LastSelected:
+                var last = possibleReferences.Last().position;
+                return GetNewPosition(last, oldPosition, axes);
+            default:
+                return oldPosition;
+        }
+    }
+    #endregion
 }
