@@ -6,23 +6,43 @@ using System.Linq;
 
 public class CustomObjectAlignment : EditorWindow {
 
+    private const string WindowTitle = "Alignment Tools";
+    
     [MenuItem("Window/MF_CustomAlignment")]
     // Use this for initialization
     static void Init () {
 
         var window = EditorWindow.GetWindow<CustomObjectAlignment>();
 
+        window.titleContent = new GUIContent(WindowTitle);
+
         window.Show();
 	}
 	 
     void OnGUI()
     {
-        EditorGUILayout.BeginVertical();
+        hasSelection = CheckEditorSelection();
 
+        EditorGUILayout.BeginVertical();
+        
         RenderAlignmentsAtOrigin();
 
         EditorGUILayout.EndVertical();
 
+    }
+
+    private bool hasSelection = false;
+    private List<GameObject> selecteObjects;
+
+    private bool CheckEditorSelection()
+    {
+        if (Selection.gameObjects.Length > 0)
+        {
+            selecteObjects = new List<GameObject>(Selection.gameObjects);
+            return true;
+        }
+
+        return false;
     }
 
     private void RenderAlignmentsAtOrigin()
@@ -31,49 +51,34 @@ public class CustomObjectAlignment : EditorWindow {
 
         EditorGUILayout.BeginHorizontal();
 
-        if (GUILayout.Button("X"))
+        if (GUILayout.Button("X") && hasSelection)
         {
-            if (Selection.gameObjects.Length > 0)
-            {
-                var objects = new List<GameObject>(Selection.gameObjects);
-
-                var transforms = objects.Select((o) => o.transform);
+                var transforms = selecteObjects.Select((o) => o.transform);
 
                 foreach (var item in transforms)
                 {
                     item.position = new Vector3(0, item.position.y, item.position.z);
                 }
-            }
         }
 
-        if (GUILayout.Button("Y"))
+        if (GUILayout.Button("Y") && hasSelection)
         {
-            if (Selection.gameObjects.Length > 0)
-            {
-                var objects = new List<GameObject>(Selection.gameObjects);
-
-                var transforms = objects.Select((o) => o.transform);
+                var transforms = selecteObjects.Select((o) => o.transform);
 
                 foreach (var item in transforms)
                 {
                     item.position = new Vector3(item.position.x, 0, item.position.z);
                 }
-            }
         }
 
-        if (GUILayout.Button("Z"))
-        {
-            if (Selection.gameObjects.Length > 0)
+        if (GUILayout.Button("Z") && hasSelection)
+        { 
+            var transforms = selecteObjects.Select((o) => o.transform);
+
+            foreach (var item in transforms)
             {
-                var objects = new List<GameObject>(Selection.gameObjects);
-
-                var transforms = objects.Select((o) => o.transform);
-
-                foreach (var item in transforms)
-                {
-                    item.position = new Vector3(item.position.x, item.position.y, 0);
-                }
-            }
+                item.position = new Vector3(item.position.x, item.position.y, 0);
+            } 
         }
 
         EditorGUILayout.EndHorizontal();
