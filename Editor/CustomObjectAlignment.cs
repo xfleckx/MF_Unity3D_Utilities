@@ -6,7 +6,9 @@ using System.Linq;
 
 public class CustomObjectAlignment : EditorWindow {
 
-    private enum AlignmentTypes { Origin, FirstSelected, LastSelected }
+    private enum AlignmentTypes { Origin, FirstSelected, LastSelected,
+        CenterOfMass
+    }
     private enum TargetAxes { x,y,z}
      
     private const string WindowTitle = "Alignment Tools";
@@ -139,17 +141,27 @@ public class CustomObjectAlignment : EditorWindow {
     }
 
     private Vector3 GetPositionFrom(AlignmentTypes type, TargetAxes axes, Vector3 oldPosition, IEnumerable<Transform> possibleReferences)
-    {
+    { 
         switch (type)
         {
             case AlignmentTypes.Origin:
                 return GetNewPosition(oldPosition, axes);
+
             case AlignmentTypes.FirstSelected:
                 var first = possibleReferences.First().position;
                 return GetNewPosition(first, oldPosition, axes);
+
             case AlignmentTypes.LastSelected:
                 var last = possibleReferences.Last().position;
                 return GetNewPosition(last, oldPosition, axes);
+
+            case AlignmentTypes.CenterOfMass:
+
+                var sum = possibleReferences.Select(t => t.position).Aggregate((t_A, t_B) => t_A + t_B);
+                var count = possibleReferences.Count();
+                var avg = new Vector3(sum.x / count, sum.y / count, sum.z / count);
+                return avg;
+
             default:
                 return oldPosition;
         }
