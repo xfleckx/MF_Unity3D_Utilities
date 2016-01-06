@@ -28,7 +28,7 @@ public class WindowGrabber : EditorWindow {
     private const string StandardPatternImageName = "sceneView";
 
     private string customImageName = StandardPatternImageName;
-    private string customFolderNamer = StandardImageFolderName;
+    private string customFolderName = StandardImageFolderName;
 
     private Texture2D tmpTexture;
 
@@ -72,10 +72,31 @@ public class WindowGrabber : EditorWindow {
 
         EditorGUILayout.EndHorizontal();
 
-        customImageName = GUILayout.TextField(customImageName);
-        customFolderNamer = GUILayout.TextField(customFolderNamer);
+        customFolderName = EditorGUILayout.TextField("Save to directory:", customFolderName);
 
-        if(GUILayout.Button("Grab last active scene view"))
+
+        var folderName = String.Empty;
+
+        if (customFolderName != String.Empty)
+            folderName = customFolderName;
+        else { 
+            EditorGUILayout.HelpBox(string.Format("Standard Folder Name: {0}", StandardImageFolderName), MessageType.Info);
+            folderName = StandardPatternImageName;
+        }
+
+        customImageName = EditorGUILayout.TextField("Image(s) Name:",customImageName);
+
+        var imageName = String.Empty;
+
+        if (customImageName != String.Empty)
+            imageName = customImageName;
+        else
+        { 
+            EditorGUILayout.HelpBox(string.Format("Standard Image Name: {0}", StandardPatternImageName), MessageType.Info);
+            imageName = StandardPatternImageName;
+        }
+
+        if (GUILayout.Button("Grab last active scene view"))
         {
             var sceneView = SceneView.lastActiveSceneView;
 
@@ -99,8 +120,8 @@ public class WindowGrabber : EditorWindow {
 
                 return;
             }
-
-            var resultFilePath = string.Format("{1}{0}{2}.{3}", Path.DirectorySeparatorChar, StandardImageFolderName, StandardPatternImageName, extension);
+             
+            var resultFilePath = string.Format("{1}{0}{2}.{3}", Path.DirectorySeparatorChar, folderName, imageName, extension);
 
             GrabSingleView(sceneView, new FileInfo(resultFilePath), selectedOutputFormat);
         }
@@ -115,16 +136,31 @@ public class WindowGrabber : EditorWindow {
             int idx = 0;
             foreach (var view in listOfViews)
             {
-                var targetImageFilePath = Path.Combine(StandardImageFolderName, string.Format(multiImageNameFormat, idx));
+                var targetImageFilePath = Path.Combine(folderName, string.Format(multiImageNameFormat, idx));
 
                 GrabSingleView(view, new FileInfo(targetImageFilePath), selectedOutputFormat);
                 idx++;
             }
         }
 
+        if(GUILayout.Button("Grabe Game View"))
+        {
+            var resultFilePath = string.Format("{1}{0}{2}{4}.{3}", Path.DirectorySeparatorChar, folderName, imageName, extension, "_gameview");
+
+            if (File.Exists(resultFilePath) && EditorUtility.DisplayDialog("Overwrite warning!", "Image already exist!", "Overwrite!", "Cancel")) {
+
+                Application.CaptureScreenshot(resultFilePath);
+            }
+            else
+            {
+                Application.CaptureScreenshot(resultFilePath);
+            }
+
+        }
+
         if(GUILayout.Button("Show Screenshot Folder"))
         {
-            Process.Start("explorer.exe", StandardImageFolderName);
+            Process.Start("explorer.exe", folderName);
             
         }
 
